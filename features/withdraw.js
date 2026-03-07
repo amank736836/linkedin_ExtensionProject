@@ -143,12 +143,13 @@ window.startAutoWithdraw = async function () {
                         await randomSleep(3000, 1000); // Wait for modal to close
 
                         // Update Statistics (Unified)
-                        const newState = await window.StatsManager.increment('withdraw');
-                        withdrawCount = newState.withdraw.total;
+                        await window.StatsManager.increment('withdraw');
+                        chrome.storage.local.set({ lastWithdrawDate: new Date().toISOString() });
+
+                        log(`   📊 Withdrawn: ${LinkedInBot.withdrawCount}`, 'SUCCESS');
                         cycleWithdrawals++;
-                        Riverside.
-                            // Reset scroll counter since we found a withdrawal
-                            scrollAttempts = 0;
+                        // Reset scroll counter since we found a withdrawal
+                        scrollAttempts = 0;
 
                         break; // Process one withdrawal per cycle to avoid rapid-fire
                     } else {

@@ -243,6 +243,7 @@ window.startAutoCatchUp = async function (settings = {}) {
 
                     // Update Statistics (Unified)
                     await window.StatsManager.increment('catchup');
+                    chrome.storage.local.set({ lastCatchUpDate: new Date().toISOString() });
 
                     // Keep card UI updated locally
                     card.setAttribute('data-processed', 'true');

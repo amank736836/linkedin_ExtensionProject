@@ -2,9 +2,13 @@
 
 // Load and display catchup count on popup open
 chrome.storage.local.get(['stats'], (data) => {
-    const catchUpCountDisplay = document.getElementById('catchUpCount');
-    if (catchUpCountDisplay && data.stats && data.stats.catchup) {
-        catchUpCountDisplay.innerText = data.stats.catchup.daily || 0;
+    const catchUpCountDisplayLocal = document.getElementById('catchUpCount');
+    if (catchUpCountDisplayLocal) {
+        chrome.storage.local.get(['stats'], (data) => {
+            if (data.stats && data.stats.catchup) {
+                catchUpCountDisplayLocal.innerText = data.stats.catchup.total || 0;
+            }
+        });
     }
 });
 

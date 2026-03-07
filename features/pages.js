@@ -107,6 +107,7 @@ window.runPagesAutomation = async function (settings = {}) {
 
                 // Update Statistics (Unified)
                 await window.StatsManager.increment('pages');
+                chrome.storage.local.set({ lastPagesDate: new Date().toISOString() });
 
                 actionTaken = true;
             }

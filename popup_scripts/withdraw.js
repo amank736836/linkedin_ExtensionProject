@@ -4,20 +4,16 @@
 document.addEventListener('DOMContentLoaded', () => {
     const withdrawBtn = document.getElementById('withdrawBtn');
     const stopWithdrawBtn = document.getElementById('stopWithdrawBtn');
-    const withdrawCountDisplay = document.getElementById('withdrawCount');
+    const withdrawCountDisplayLocal = document.getElementById('withdrawCount');
 
     // Load and display withdrawal count
     function updateCounter() {
-        if (withdrawCountDisplay) {
-            console.log('[WITHDRAW POPUP] Checking storage for withdrawCount...');
-            chrome.storage.local.get(['withdrawCount'], (data) => {
-                console.log('[WITHDRAW POPUP] Storage data:', data);
-                const count = data.withdrawCount || 0;
-                console.log('[WITHDRAW POPUP] Setting counter to:', count);
-                withdrawCountDisplay.innerText = count;
+        if (withdrawCountDisplayLocal) {
+            chrome.storage.local.get(['stats'], (data) => {
+                if (data.stats && data.stats.withdraw) {
+                    withdrawCountDisplayLocal.innerText = data.stats.withdraw.total || 0;
+                }
             });
-        } else {
-            console.error('[WITHDRAW POPUP] withdrawCountDisplay element NOT FOUND!');
         }
     }
 
@@ -74,7 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (chrome.runtime.lastError) {
                             const errorLog = document.createElement('div');
                             errorLog.style.color = '#cc1016';
-                            errorLog.innerText = `[WITHDRAW] Error: ${chrome.runtime.lastError.message}`;
+                            errorLog.innerText = `[WITHDRAW] Error: ${chrome.runtime.lastError.message} `;
                             logDisplay.appendChild(errorLog);
                             withdrawBtn.disabled = false;
                             if (stopWithdrawBtn) stopWithdrawBtn.disabled = true;
@@ -106,17 +102,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Real-time count updates (storage listener)
     chrome.storage.onChanged.addListener((changes, namespace) => {
-        if (namespace === 'local' && changes.withdrawCount && withdrawCountDisplay) {
-            withdrawCountDisplay.innerText = changes.withdrawCount.newValue;
+        if (namespace === 'local' && changes.stats && withdrawCountDisplayLocal) {
+            if (changes.stats.newValue && changes.stats.newValue.withdraw) {
+                withdrawCountDisplayLocal.innerText = changes.stats.newValue.withdraw.total || 0;
+            }
         }
     });
 
     // Polling fallback: Update counter every second while running
     let updateInterval = setInterval(() => {
-        if (withdrawCountDisplay) {
-            chrome.storage.local.get(['withdrawCount', 'withdrawRunning'], (data) => {
-                if (data.withdrawCount !== undefined) {
-                    withdrawCountDisplay.innerText = data.withdrawCount;
+        if (withdrawCountDisplayLocal) {
+            chrome.storage.local.get(['stats', 'withdrawRunning'], (data) => {
+                if (data.stats && data.stats.withdraw) {
+                    withdrawCountDisplayLocal.innerText = data.stats.withdraw.total || 0;
                 }
                 // Stop polling if not running
                 if (!data.withdrawRunning) {

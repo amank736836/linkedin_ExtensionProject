@@ -126,7 +126,8 @@ window.startAutomation = async function (settings) {
 
                             // Update Statistics (Unified)
                             await window.StatsManager.increment('apply');
-
+                            chrome.storage.local.set({ lastApplyDate: new Date().toISOString() });
+                            await randomSleep(2000, 1000); // 1-3 seconds
                             log(`✓ Applied! Waiting 45s...`, 'SUCCESS');
                             await randomSleep(45000);
                             // Dismiss and Handle "Save" Modal

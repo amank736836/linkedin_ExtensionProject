@@ -175,6 +175,10 @@ window.startAutoConnect = async function (settings = {}) {
 
             // Update Statistics (Unified)
             await window.StatsManager.increment('connect');
+
+            // Store Last Connect Date for user visibility
+            chrome.storage.local.set({ lastConnectDate: new Date().toISOString() });
+
             // Post-click check (catch immediate toasts/modals)
             await randomSleep(2000, 1000); // 1-3 seconds
             const postClickCheck = document.querySelector('.artdeco-modal') || document.querySelector('div[role="alert"]') || document.querySelector('.artdeco-toast');

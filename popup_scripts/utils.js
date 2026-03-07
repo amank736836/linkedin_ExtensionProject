@@ -107,10 +107,25 @@ function updateUI(status) {
         stopPagesBtn.disabled = !status.isPagesRunning;
     }
 
-    if (countDisplay) countDisplay.innerText = status.applicationCount || 0;
-    if (connectCountDisplay) connectCountDisplay.innerText = status.connectCount || 0;
-    if (catchUpCountDisplay) catchUpCountDisplay.innerText = status.catchUpCount || 0;
-    if (pagesCountDisplay) pagesCountDisplay.innerText = status.pagesCount || 0;
+    if (status.stats) {
+        if (countDisplay && status.stats.apply) countDisplay.innerText = status.stats.apply.total || 0;
+        if (connectCountDisplay && status.stats.connect) connectCountDisplay.innerText = status.stats.connect.total || 0;
+        const catchUpD = document.getElementById('catchUpCount');
+        if (catchUpD && status.stats.catchup) catchUpD.innerText = status.stats.catchup.total || 0;
+        const pagesD = document.getElementById('pagesCount');
+        if (pagesD && status.stats.pages) pagesD.innerText = status.stats.pages.total || 0;
+        const withdrawD = document.getElementById('withdrawCount');
+        if (withdrawD && status.stats.withdraw) withdrawD.innerText = status.stats.withdraw.total || 0;
+    } else {
+        if (countDisplay) countDisplay.innerText = status.applicationCount || 0;
+        if (connectCountDisplay) connectCountDisplay.innerText = status.connectCount || 0;
+        const catchUpD = document.getElementById('catchUpCount');
+        if (catchUpD) catchUpD.innerText = status.catchUpCount || 0;
+        const pagesD = document.getElementById('pagesCount');
+        if (pagesD) pagesD.innerText = status.pagesCount || 0;
+        const withdrawD = document.getElementById('withdrawCount');
+        if (withdrawD) withdrawD.innerText = status.withdrawCount || 0;
+    }
 }
 
 function saveSettings() {
