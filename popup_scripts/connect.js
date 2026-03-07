@@ -21,10 +21,12 @@ chrome.storage.local.get(['connectRunning', 'connectSettings'], (data) => {
 
 // Load and display connect count on popup open (Renamed to avoid utils.js conflict)
 const connectDisplayLocal = document.getElementById('connectCount');
+const connectWeeklyDisplayLocal = document.getElementById('connectCountWeekly');
 if (connectDisplayLocal) {
     chrome.storage.local.get(['stats'], (data) => {
         if (data.stats && data.stats.connect) {
             connectDisplayLocal.innerText = data.stats.connect.total || 0;
+            if (connectWeeklyDisplayLocal) connectWeeklyDisplayLocal.innerText = data.stats.connect.weekly || 0;
         }
     });
 }

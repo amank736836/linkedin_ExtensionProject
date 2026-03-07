@@ -23,12 +23,12 @@ window.startAutoWithdraw = async function () {
     let withdrawCount = window.StatsManager.state.withdraw.total || 0;
 
     let scrollAttempts = 0;
-    const MAX_EMPTY_SCROLLS = 5; // Try 5 scrolls to find next eligible request
+    const MAX_EMPTY_SCROLLS = 10; // Try 10 scrolls to find next eligible request
 
     log(`🛡️ Starting Deep Clean... [Total Withdrawn: ${withdrawCount}]`, 'INFO');
 
+    let sessionWithdrawn = 0; // Local counter for this run
     let cycleNumber = 0;
-    let previousHeight = 0;
 
     while (LinkedInBot.isWithdrawing) {
         // SAFETY CHECK
@@ -38,12 +38,19 @@ window.startAutoWithdraw = async function () {
         cycleNumber++;
         log(`🔄 Scan Cycle ${cycleNumber}... (Empty scrolls: ${scrollAttempts}/${MAX_EMPTY_SCROLLS})`, 'INFO');
 
-        // 1. Find all "Withdraw" buttons directly
-        const allButtons = Array.from(document.querySelectorAll('button'));
-        const withdrawBtns = allButtons.filter(b =>
-            b.innerText.trim() === 'Withdraw' ||
-            (b.getAttribute('aria-label') && b.getAttribute('aria-label').includes('Withdraw'))
-        );
+        // 1. Find all potential "Withdraw" nodes directly. 
+        // Including div/p/span as used in the successful console script.
+        const allNodes = Array.from(document.querySelectorAll('span, a, button, div, p'));
+        const withdrawBtns = allNodes.filter(b => {
+            const t = (b.innerText || "").trim().toLowerCase();
+            if (t !== 'withdraw') return false;
+            if (b.offsetParent === null) return false; // Must be visible
+            // Optimization: Find innermost element (if any child has the exact same text, skip this parent)
+            if (Array.from(b.querySelectorAll('*')).some(child => (child.innerText || "").trim().toLowerCase() === 'withdraw')) return false;
+            return true;
+        });
+
+        log(`🔎 Found ${withdrawBtns.length} potential Withdraw buttons.`, 'INFO');
 
         let cycleWithdrawals = 0;
 
@@ -56,105 +63,135 @@ window.startAutoWithdraw = async function () {
             // Safety check
             await handleSecurityCheckpoint();
 
-            // 2. Find container with "Sent" text nearby
+            // 2. Find container dynamically by traversing up until we encapsulate the metadata
             let container = btn.parentElement;
             let foundCard = false;
             let timeTextFound = "";
             let nameFound = "Unknown";
+            let fullText = "";
 
-            // Traverse up to find the text
-            for (let i = 0; i < 6; i++) {
-                if (!container) break;
-                const text = container.innerText.toLowerCase();
-
-                // Check for "Sent" AND time unit (heuristic)
-                if (text.includes('sent') && (text.includes('ago') || text.includes('week') || text.includes('month'))) {
+            for (let i = 0; i < 9; i++) {
+                if (!container || container.tagName === 'BODY') break;
+                fullText = (container.innerText || "").toLowerCase();
+                // A valid card container will have "sent [time] ago" and "withdraw"
+                if (fullText.includes('sent') && (fullText.includes('ago') || fullText.includes('week') || fullText.includes('month') || fullText.includes('year'))) {
                     foundCard = true;
-
-                    // Extract just the line with "Sent" if possible for logging
-                    const lines = container.innerText.split('\n');
-                    const sentLine = lines.find(l => l.toLowerCase().includes('sent') && (l.toLowerCase().includes('ago') || l.toLowerCase().includes('week') || l.toLowerCase().includes('month')));
-
-                    // Use full text if line not found
-                    timeTextFound = sentLine ? sentLine.trim() : container.innerText;
-
-                    // Try to grab name
-                    const nameEl = container.querySelector('strong, .artdeco-entity-lockup__title, .invitation-card__title');
-                    if (nameEl) nameFound = nameEl.innerText.trim();
-                    else if (lines.length > 0) nameFound = lines[0].trim();
-
                     break;
                 }
                 container = container.parentElement;
             }
 
-            if (!foundCard) continue;
+            if (!container) continue;
+
+            // Extract just the line with "Sent" if possible for logging
+            const lines = container.innerText.split('\n').map(l => l.trim()).filter(l => l);
+            const sentLine = lines.find(l => l.toLowerCase().includes('sent') && (l.toLowerCase().includes('ago') || l.toLowerCase().includes('week') || l.toLowerCase().includes('month') || l.toLowerCase().includes('year')));
+
+            // Use full text if line not found
+            timeTextFound = sentLine ? sentLine : fullText;
+
+            // Name is usually the first non-empty line in the card block
+            if (lines.length > 0) nameFound = lines[0];
+
+            if (!foundCard) {
+                // Not a valid invitation card or couldn't parse time
+                continue;
+            }
 
             let shouldWithdraw = false;
             const lowerTimeText = timeTextFound.toLowerCase();
 
             // PARSING LOGIC
+            // Only withdraw if older than 2 weeks
             if (lowerTimeText.includes('year') || lowerTimeText.includes('month')) {
+                // Any month or year is > 2 weeks
                 shouldWithdraw = true;
             } else if (lowerTimeText.includes('week')) {
+                // "sent 3 weeks ago", "3 weeks", etc.
                 const match = lowerTimeText.match(/(\d+)\s+week/);
-                if (match && parseInt(match[1]) >= 2) {
+                if (match && parseInt(match[1], 10) >= 2) {
                     shouldWithdraw = true;
                 }
             }
 
-            if (shouldWithdraw) {
-                log(`🗑️ Withdrawing request to ${nameFound} (${timeTextFound})...`, 'INFO');
+            if (!shouldWithdraw) {
+                log(`   ⌛ Skipping ${nameFound} (${timeTextFound}) - too new.`, 'DEBUG');
+                continue;
+            }
 
-                // The 'btn' variable is already the withdraw button we found
-                if (btn) {
-                    // Use same simple click as Auto-Connect works (line 145 in connect.js)
-                    btn.click();
+            log(`🗑️ Withdrawing request to ${nameFound} (${timeTextFound})...`, 'INFO');
 
-                    // Wait loop for modal (up to 3s)
-                    let modal = null;
-                    for (let i = 0; i < 6; i++) {
-                        await randomSleep(500, 200); // 300-700ms
-                        // LinkedIn's modal has id="dialog-header", not role="dialog"
-                        modal = document.querySelector('.artdeco-modal') ||
-                            document.getElementById('dialog-header')?.parentElement ||
-                            document.querySelector('[role="main"]');
-                        if (modal) break;
+            if (btn) {
+                // Find actual clickable parent (a link or button)
+                let clickableBtn = btn;
+                for (let i = 0; i < 3; i++) {
+                    if (clickableBtn.tagName === 'BUTTON' || clickableBtn.tagName === 'A' || clickableBtn.getAttribute('role') === 'button') break;
+                    if (clickableBtn.parentElement) clickableBtn = clickableBtn.parentElement;
+                }
+
+                clickableBtn.click();
+
+                // 3. Wait for modal (up to 3s)
+                let modal = null;
+                for (let i = 0; i < 6; i++) {
+                    await randomSleep(500, 200); // 300-700ms
+                    // LinkedIn's modal has id="dialog-header", not role="dialog"
+                    modal = document.querySelector('.artdeco-modal') ||
+                        document.getElementById('dialog-header')?.parentElement ||
+                        document.querySelector('[role="main"]');
+                    if (modal) break;
+                }
+
+                let confirmBtn = null;
+                if (modal) {
+                    log('   🔍 Modal found. Searching for confirm button...', 'DEBUG');
+
+                    const modalBtns = Array.from(modal.querySelectorAll('button, [role="button"]'));
+                    confirmBtn = modalBtns.find(b => {
+                        const txt = (b.innerText || "").trim().toLowerCase();
+                        return txt === 'withdraw';
+                    });
+
+                    // Fallback to any primary button if exact text match fails
+                    if (!confirmBtn) {
+                        confirmBtn = modal.querySelector('.artdeco-button--primary');
+                    }
+                } else {
+                    // Fallback: Global search for Confirm button since modal class might be obfuscated
+                    log('   ⚠️ Modal container not found. Scanning globally for Confirmation...', 'WARNING');
+                    const allNodesNow = Array.from(document.querySelectorAll('button, span, div'));
+                    // Look for a blue button that says "Withdraw" and isn't the original card button
+                    confirmBtn = allNodesNow.find(b => {
+                        const txt = (b.innerText || "").trim().toLowerCase();
+                        return txt === 'withdraw' && b !== btn && b.offsetParent !== null && b.classList.contains('artdeco-button--primary');
+                    });
+                }
+
+                if (confirmBtn) {
+                    // ENSURE WE CLICK THE ACTUAL BUTTON (traverse up if we found a span/div)
+                    let modalClickable = confirmBtn;
+                    for (let i = 0; i < 3; i++) {
+                        if (modalClickable.tagName === 'BUTTON' || modalClickable.tagName === 'A') break;
+                        if (modalClickable.parentElement) modalClickable = modalClickable.parentElement;
                     }
 
-                    let confirmBtn = null;
-                    if (modal) {
-                        // Find Primary Button (Blue one) inside Modal
-                        confirmBtn = Array.from(modal.querySelectorAll('button')).find(b =>
-                            b.classList.contains('artdeco-button--primary') ||
-                            b.innerText.trim() === 'Withdraw' ||
-                            (b.getAttribute('aria-label') && b.getAttribute('aria-label').includes('Withdraw'))
-                        );
-                    } else {
-                        // Fallback: Global search for Primary Withdraw Button (if modal container not found)
-                        log('   ⚠️ Modal container not found. Scanning globally for Confirm button...', 'WARNING');
-                        const allPrimary = Array.from(document.querySelectorAll('button.artdeco-button--primary'));
-                        confirmBtn = allPrimary.find(b => b.innerText.trim() === 'Withdraw' && b !== btn && b.offsetParent !== null);
-                    }
+                    log('   ✅ Clicking Confirm Button...', 'INFO');
+                    modalClickable.click();
+                    await randomSleep(3000, 1000); // Wait for modal to close
 
-                    if (confirmBtn) {
-                        log('   ✅ Clicking Confirm Button...', 'INFO');
-                        confirmBtn.click();
-                        await randomSleep(3000, 1000); // Wait for modal to close
+                    // Update Statistics (Unified)
+                    await window.StatsManager.increment('withdraw');
+                    chrome.storage.local.set({ lastWithdrawDate: new Date().toISOString() });
 
-                        // Update Statistics (Unified)
-                        await window.StatsManager.increment('withdraw');
-                        chrome.storage.local.set({ lastWithdrawDate: new Date().toISOString() });
+                    sessionWithdrawn++;
+                    log(`   📊 Withdrawn in session: ${sessionWithdrawn}`, 'SUCCESS');
+                    cycleWithdrawals++;
+                    // Reset scroll counter since we found a withdrawal
+                    scrollAttempts = 0;
 
-                        log(`   📊 Withdrawn: ${LinkedInBot.withdrawCount}`, 'SUCCESS');
-                        cycleWithdrawals++;
-                        // Reset scroll counter since we found a withdrawal
-                        scrollAttempts = 0;
-
-                        break; // Process one withdrawal per cycle to avoid rapid-fire
-                    } else {
-                        log('   ❌ Confirm button NOT found (Modal or Global).', 'ERROR');
-                    }
+                    break; // Process one withdrawal per cycle to avoid rapid-fire
+                } else {
+                    log('   ❌ Confirm button NOT found (Modal or Global).', 'ERROR');
                 }
             }
         }
@@ -183,12 +220,22 @@ window.startAutoWithdraw = async function () {
         // SCROLL / LOAD MORE LOGIC
         log(`Cycle Complete. Withdrew: ${cycleWithdrawals}. Scrolling...`, 'INFO');
 
-        // Measure scrollable height BEFORE scroll
+        // 1. Element-based scrolling (MOST RELIABLE for triggering lazy loaders)
+        if (withdrawBtns.length > 0) {
+            const lastBtn = withdrawBtns[withdrawBtns.length - 1];
+            log(`   📜 Scrolling last invitation into view...`, 'DEBUG');
+            lastBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            await randomSleep(1000, 500);
+        }
+
+        // 2. Container-based scrolling (Backwards compatibility/Fallback)
         const scrollSelectors = [
-            'section.scaffold-layout__list',
-            'div.scaffold-layout__list',
+            'main#workspace',
             '#workspace',
-            'div.artdeco-card'
+            'main',
+            'div.artdeco-modal__content',
+            '.invitation-manager-v2-main',
+            'section.scaffold-layout__list'
         ];
 
         let scrollContainer = null;
@@ -199,23 +246,27 @@ window.startAutoWithdraw = async function () {
             if (el) {
                 scrollContainer = el;
                 beforeHeight = el.scrollHeight;
-                log(`   Found scroll container: ${selector}`, 'DEBUG');
-                el.scrollTop = el.scrollHeight;
+                log(`   Container scroll: ${selector} (Height: ${beforeHeight})`, 'DEBUG');
+                el.scrollTop = el.scrollHeight + 1000;
                 break;
             }
         }
 
+        // 3. Window-based scrolling (Ultimate fallback)
+        window.scrollBy(0, 1000);
+        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+
         if (!scrollContainer) {
-            // Fallback to window scroll
-            beforeHeight = document.body.scrollHeight;
-            window.scrollTo(0, document.body.scrollHeight);
+            beforeHeight = document.documentElement.scrollHeight || document.body.scrollHeight;
+            scrollContainer = { scrollHeight: beforeHeight };
         }
 
         // Check for "Load more" button and click it
         await randomSleep(2000, 1000); // 1-3 seconds (human-like variation)
-        const loadMoreBtn = Array.from(document.querySelectorAll('button')).find(btn =>
-            btn.innerText.trim().toLowerCase() === 'load more'
-        );
+        const loadMoreBtn = Array.from(document.querySelectorAll('button')).find(btn => {
+            const txt = (btn.innerText || "").trim().toLowerCase();
+            return txt === 'load more' || txt.includes('show more results') || btn.classList.contains('scaffold-finite-scroll__load-button');
+        });
 
         if (loadMoreBtn && loadMoreBtn.offsetParent !== null) {
             log('   📥 Clicking "Load more" button...', 'INFO');
@@ -252,7 +303,7 @@ window.startAutoWithdraw = async function () {
     // Clear flag on complete
     LinkedInBot.isWithdrawing = false;
     chrome.storage.local.set({ withdrawRunning: false });
-    log(`🎉 Auto-Withdraw complete (or stopped). Removed ${withdrawCount} old requests.`, 'INFO');
+    log(`🎉 Auto-Withdraw complete (or stopped). Total withdrawn this session: ${sessionWithdrawn}`, 'INFO');
 };
 
 window.stopAutoWithdraw = function () {

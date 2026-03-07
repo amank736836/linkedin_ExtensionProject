@@ -109,7 +109,11 @@ function updateUI(status) {
 
     if (status.stats) {
         if (countDisplay && status.stats.apply) countDisplay.innerText = status.stats.apply.total || 0;
-        if (connectCountDisplay && status.stats.connect) connectCountDisplay.innerText = status.stats.connect.total || 0;
+        if (connectCountDisplay && status.stats.connect) {
+            connectCountDisplay.innerText = status.stats.connect.total || 0;
+            const weekDisplay = document.getElementById('connectCountWeekly');
+            if (weekDisplay) weekDisplay.innerText = status.stats.connect.weekly || 0;
+        }
         const catchUpD = document.getElementById('catchUpCount');
         if (catchUpD && status.stats.catchup) catchUpD.innerText = status.stats.catchup.total || 0;
         const pagesD = document.getElementById('pagesCount');

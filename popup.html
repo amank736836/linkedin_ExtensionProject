@@ -191,8 +191,10 @@
   <div id="connect" class="tab-content">
     <div class="section">
       <div class="section-title">Auto-Connect</div>
-      <div class="count-row">
-        <span>Sent Requests: <span id="connectCount" class="count">0</span></span>
+      <div class="count-row" style="flex-direction: column; align-items: flex-start; gap: 5px;">
+        <span>This Week: <span id="connectCountWeekly" class="count"
+            style="color: #2e7d32; font-size: 16px;">0</span></span>
+        <span>Overall Sent: <span id="connectCount" class="count" style="font-size: 16px;">0</span></span>
       </div>
       <div class="input-group">
         <label>Daily Delay (seconds)</label>
