@@ -34,12 +34,15 @@ if (startPagesBtn) {
                     logDisplay.appendChild(logItem);
                     logDisplay.scrollTop = logDisplay.scrollHeight;
 
-                    // Determine Target URL
-                    const targetUrl = selectedMode === 'unfollow'
-                        ? 'https://www.linkedin.com/mynetwork/network-manager/company/'
-                        : 'https://www.linkedin.com/search/results/companies/';
+                    // REQUEST BYPASS BEFORE REDIRECT
+                    chrome.tabs.sendMessage(tabs[0].id, { action: 'bypassAlert' }, () => {
+                        // Determine Target URL
+                        const targetUrl = selectedMode === 'unfollow'
+                            ? 'https://www.linkedin.com/mynetwork/network-manager/company/'
+                            : 'https://www.linkedin.com/search/results/companies/';
 
-                    chrome.tabs.update(tabs[0].id, { url: targetUrl });
+                        chrome.tabs.update(tabs[0].id, { url: targetUrl });
+                    });
                     return;
                 }
 

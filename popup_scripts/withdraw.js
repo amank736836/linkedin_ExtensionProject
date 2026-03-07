@@ -49,13 +49,16 @@ document.addEventListener('DOMContentLoaded', () => {
                         // Save state BEFORE redirect for auto-resume
                         chrome.storage.local.set({ withdrawRunning: true });
 
-                        const targetUrl = 'https://www.linkedin.com/mynetwork/invitation-manager/sent/';
-                        chrome.tabs.update(tabs[0].id, { url: targetUrl });
+                        // REQUEST BYPASS BEFORE REDIRECT
+                        chrome.tabs.sendMessage(tabs[0].id, { action: 'bypassAlert' }, () => {
+                            const targetUrl = 'https://www.linkedin.com/mynetwork/invitation-manager/sent/';
+                            chrome.tabs.update(tabs[0].id, { url: targetUrl });
 
-                        const logItem = document.createElement('div');
-                        logItem.style.color = '#e6b800';
-                        logItem.innerText = "[WITHDRAW] Redirecting to Sent Invitations... Will auto-resume in 5s!";
-                        logDisplay.appendChild(logItem);
+                            const logItem = document.createElement('div');
+                            logItem.style.color = '#e6b800';
+                            logItem.innerText = "[WITHDRAW] Redirecting to Sent Invitations... Will auto-resume in 5s!";
+                            logDisplay.appendChild(logItem);
+                        });
                         return;
                     }
 

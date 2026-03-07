@@ -123,10 +123,11 @@ window.startAutomation = async function (settings) {
                         const submit = document.querySelector('button[aria-label*="Submit"]');
                         if (submit) {
                             submit.click();
-                            LinkedInBot.applicationCount++;
-                            window.StatsManager.increment('apply'); // Centralized stats
+
+                            // Update Statistics (Unified)
+                            await window.StatsManager.increment('apply');
+
                             log(`✓ Applied! Waiting 45s...`, 'SUCCESS');
-                            chrome.runtime.sendMessage({ action: 'updateCount', count: LinkedInBot.applicationCount });
                             await randomSleep(45000);
                             // Dismiss and Handle "Save" Modal
                             await dismissAndSave();

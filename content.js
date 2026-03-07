@@ -14,11 +14,14 @@ function stopAllAutomation() {
     LinkedInBot.isConnecting = false;   // Connect
     LinkedInBot.isCatchingUp = false;   // CatchUp
     LinkedInBot.isPagesRunning = false; // Pages
+    LinkedInBot.isWithdrawing = false;  // Withdraw
 
     // Clear Persistence Flags
     chrome.storage.local.set({
         autoConnectRunning: false,
-        catchUpRunning: false
+        catchUpRunning: false,
+        withdrawRunning: false,
+        pagesRunning: false
     });
 }
 
@@ -94,7 +97,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             isCatchingUp: LinkedInBot.isCatchingUp,
             catchUpCount: LinkedInBot.catchUpCount,
             isPagesRunning: LinkedInBot.isPagesRunning,
-            pagesCount: LinkedInBot.pagesCount
+            pagesCount: LinkedInBot.pagesCount,
+            withdrawCount: LinkedInBot.withdrawCount,
+            isWithdrawing: LinkedInBot.isWithdrawing,
+            stats: window.StatsManager && window.StatsManager.state ? window.StatsManager.state : null
         });
     }
     // 10. Scrape Profile (Onboarding)
@@ -136,6 +142,16 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         }
         sendResponse({ status: 'stopped' });
     }
+    // 13. Bypass Redirection Alerts (Requested by Popup)
+    else if (request.action === 'bypassAlert') {
+        if (typeof window.bypassBeforeUnload === 'function') {
+            window.bypassBeforeUnload();
+        } else {
+            // Fallback
+            window.onbeforeunload = null;
+        }
+        sendResponse({ status: 'bypassed' });
+    }
 });
 
 // --- PERSISTENCE INIT ---
@@ -176,6 +192,7 @@ chrome.storage.local.get(['catchUpRunning', 'catchUpSettings'], (data) => {
         else {
             log('🔀 Navigation away from Catch-Up detected! Redirecting back in 3s... 🔙', 'WARNING');
             setTimeout(() => {
+                if (typeof window.bypassBeforeUnload === 'function') window.bypassBeforeUnload();
                 window.location.href = 'https://www.linkedin.com/mynetwork/catch-up/all/';
             }, 3000);
         }

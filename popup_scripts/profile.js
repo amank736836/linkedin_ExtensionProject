@@ -43,16 +43,19 @@ if (autoFillBtn) {
 
                     // Save state for auto-resume after redirect
                     chrome.storage.local.set({ autoFillPending: true }, () => {
-                        // Auto-redirect to LinkedIn profile page
-                        chrome.tabs.update(tabs[0].id, {
-                            url: 'https://www.linkedin.com/in/me/'
-                        }, () => {
-                            isAutoFilling = false; // Reset flag after redirect
-                            // Update UI message
-                            setTimeout(() => {
-                                logItem.innerText = "✅ Redirected! Auto-extracting profile data...";
-                                logItem.style.color = 'green';
-                            }, 1000);
+                        // REQUEST BYPASS BEFORE REDIRECT
+                        chrome.tabs.sendMessage(tabs[0].id, { action: 'bypassAlert' }, () => {
+                            // Auto-redirect to LinkedIn profile page
+                            chrome.tabs.update(tabs[0].id, {
+                                url: 'https://www.linkedin.com/in/me/'
+                            }, () => {
+                                isAutoFilling = false; // Reset flag after redirect
+                                // Update UI message
+                                setTimeout(() => {
+                                    logItem.innerText = "✅ Redirected! Auto-extracting profile data...";
+                                    logItem.style.color = 'green';
+                                }, 1000);
+                            });
                         });
                     });
                     return;

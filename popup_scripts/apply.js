@@ -64,7 +64,11 @@ if (startBtn) {
                     logItem.style.color = '#e6b800';
                     logItem.innerText = "[APPLY] Redirecting to Jobs Search page... Will auto-resume in 5s!";
                     logDisplay.appendChild(logItem);
-                    chrome.tabs.update(tabs[0].id, { url: targetUrl.toString() });
+
+                    // REQUEST BYPASS BEFORE REDIRECT
+                    chrome.tabs.sendMessage(tabs[0].id, { action: 'bypassAlert' }, () => {
+                        chrome.tabs.update(tabs[0].id, { url: targetUrl.toString() });
+                    });
                     return;
                 }
 

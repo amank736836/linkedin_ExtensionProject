@@ -103,12 +103,16 @@ if (startConnectBtn) {
                     });
 
                     const targetUrl = 'https://www.linkedin.com/mynetwork/grow/';
-                    chrome.tabs.update(tabs[0].id, { url: targetUrl });
 
-                    const logItem = document.createElement('div');
-                    logItem.style.color = '#e6b800';
-                    logItem.innerText = "[CONNECT] Redirecting to 'Grow' page... Will auto-resume in 5s!";
-                    logDisplay.appendChild(logItem);
+                    // REQUEST BYPASS BEFORE REDIRECT
+                    chrome.tabs.sendMessage(tabs[0].id, { action: 'bypassAlert' }, () => {
+                        chrome.tabs.update(tabs[0].id, { url: targetUrl });
+
+                        const logItem = document.createElement('div');
+                        logItem.style.color = '#e6b800';
+                        logItem.innerText = "[CONNECT] Redirecting to 'Grow' page... Will auto-resume in 5s!";
+                        logDisplay.appendChild(logItem);
+                    });
                     return;
                 }
 

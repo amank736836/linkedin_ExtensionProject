@@ -18,7 +18,7 @@ if (startCatchUpBtn) {
         const limitInput = document.getElementById('catchUpLimit');
         const limit = parseInt(limitInput ? limitInput.value : 200, 10) || 200;
 
-        // 2. Save Settings & Running State (For Persistence)
+        // 2. Save Running State (Settings are auto-saved by fields array in utils.js)
         chrome.storage.local.set({
             catchUpRunning: true,
             catchUpSettings: { type, limit }
@@ -28,13 +28,16 @@ if (startCatchUpBtn) {
             if (tabs[0]) {
                 // 3. Check URL and Redirect if needed
                 if (!tabs[0].url.includes('mynetwork/catch-up')) {
-                    const targetUrl = 'https://www.linkedin.com/mynetwork/catch-up/all/';
-                    chrome.tabs.update(tabs[0].id, { url: targetUrl });
+                    // REQUEST BYPASS BEFORE REDIRECT
+                    chrome.tabs.sendMessage(tabs[0].id, { action: 'bypassAlert' }, () => {
+                        const targetUrl = 'https://www.linkedin.com/mynetwork/catch-up/all/';
+                        chrome.tabs.update(tabs[0].id, { url: targetUrl });
 
-                    const logItem = document.createElement('div');
-                    logItem.style.color = '#e6b800'; // Orange/Yellow
-                    logItem.innerText = "[CATCH-UP] Redirecting to 'Catch-Up' page... Will auto-resume in 4s! 🚀";
-                    logDisplay.appendChild(logItem);
+                        const logItem = document.createElement('div');
+                        logItem.style.color = '#e6b800'; // Orange/Yellow
+                        logItem.innerText = "[CATCH-UP] Redirecting to 'Catch-Up' page... Will auto-resume in 4s! 🚀";
+                        logDisplay.appendChild(logItem);
+                    });
                     return;
                 }
 

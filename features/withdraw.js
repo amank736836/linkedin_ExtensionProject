@@ -18,14 +18,9 @@ window.startAutoWithdraw = async function () {
 
     await randomSleep(3000, 1000); // 2-4 seconds
 
-    // Load existing count from storage
-    let withdrawCount = 0;
-    await new Promise(resolve => {
-        chrome.storage.local.get(['withdrawCount'], (data) => {
-            withdrawCount = data.withdrawCount || 0;
-            resolve();
-        });
-    });
+    // Use StatsManager for count
+    if (!window.StatsManager.state) await window.StatsManager.init();
+    let withdrawCount = window.StatsManager.state.withdraw.total || 0;
 
     let scrollAttempts = 0;
     const MAX_EMPTY_SCROLLS = 5; // Try 5 scrolls to find next eligible request
@@ -144,16 +139,16 @@ window.startAutoWithdraw = async function () {
 
                     if (confirmBtn) {
                         log('   ✅ Clicking Confirm Button...', 'INFO');
-                        confirmBtn.click(); // Simple click like Auto-Connect
-                        await randomSleep(3000, 1000); // 2-4 seconds // Wait for modal to close
-                        withdrawCount++;
+                        confirmBtn.click();
+                        await randomSleep(3000, 1000); // Wait for modal to close
+
+                        // Update Statistics (Unified)
+                        const newState = await window.StatsManager.increment('withdraw');
+                        withdrawCount = newState.withdraw.total;
                         cycleWithdrawals++;
-
-                        // Persist count to storage
-                        chrome.storage.local.set({ withdrawCount: withdrawCount });
-
-                        // Reset scroll counter since we found a withdrawal
-                        scrollAttempts = 0;
+                        Riverside.
+                            // Reset scroll counter since we found a withdrawal
+                            scrollAttempts = 0;
 
                         break; // Process one withdrawal per cycle to avoid rapid-fire
                     } else {

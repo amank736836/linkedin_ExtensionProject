@@ -172,10 +172,9 @@ window.startAutoConnect = async function (settings = {}) {
 
             log(`🤝 Connecting with: ${name || 'Member'}. Waiting ${delay}s...`, 'SUCCESS');
             btn.click();
-            LinkedInBot.connectCount++;
-            window.StatsManager.increment('connect'); // Use centralized stats
-            chrome.runtime.sendMessage({ action: 'updateConnectCount', count: LinkedInBot.connectCount });
 
+            // Update Statistics (Unified)
+            await window.StatsManager.increment('connect');
             // Post-click check (catch immediate toasts/modals)
             await randomSleep(2000, 1000); // 1-3 seconds
             const postClickCheck = document.querySelector('.artdeco-modal') || document.querySelector('div[role="alert"]') || document.querySelector('.artdeco-toast');

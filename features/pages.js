@@ -4,11 +4,9 @@ window.runPagesAutomation = async function (settings = {}) {
     if (LinkedInBot.isPagesRunning) return;
     LinkedInBot.isPagesRunning = true;
 
-    // Load existing count from storage
-    const storageData = await new Promise(resolve => {
-        chrome.storage.local.get(['pagesCount'], resolve);
-    });
-    LinkedInBot.pagesCount = storageData.pagesCount || 0;
+    // Use StatsManager for count
+    if (!window.StatsManager.state) await window.StatsManager.init();
+    LinkedInBot.pagesCount = window.StatsManager.state.pages.total || 0;
 
     const limit = settings.limit || 500;
     const mode = settings.mode || 'follow'; // 'follow' or 'unfollow'
@@ -68,11 +66,11 @@ window.runPagesAutomation = async function (settings = {}) {
             if (mode === 'follow') {
                 log(`   ➕ Following: ${name}`, 'SUCCESS');
                 targetBtn.click();
-                LinkedInBot.pagesCount++;
-                window.StatsManager.increment('pages'); // Centralized stats
+
+                // Update Statistics (Unified)
+                await window.StatsManager.increment('pages');
+
                 actionTaken = true;
-                chrome.storage.local.set({ pagesCount: LinkedInBot.pagesCount }); // Persist to storage
-                chrome.runtime.sendMessage({ action: 'updatePagesCount', count: LinkedInBot.pagesCount });
             } else if (mode === 'unfollow') {
                 log(`   ➖ Unfollowing: ${name}`, 'SUCCESS');
                 targetBtn.click();
@@ -107,11 +105,10 @@ window.runPagesAutomation = async function (settings = {}) {
                     log('   ⚠️ Unfollow Modal NOT detected after click.', 'WARNING');
                 }
 
-                LinkedInBot.pagesCount++;
-                window.StatsManager.increment('pages'); // Centralized stats
+                // Update Statistics (Unified)
+                await window.StatsManager.increment('pages');
+
                 actionTaken = true;
-                chrome.storage.local.set({ pagesCount: LinkedInBot.pagesCount }); // Persist to storage
-                chrome.runtime.sendMessage({ action: 'updatePagesCount', count: LinkedInBot.pagesCount });
             }
 
 

@@ -4,7 +4,7 @@
 const fields = [
     'fullName', 'email', 'phone', 'salary', 'notice', 'maxApps',
     'keywords', 'location', 'datePosted', 'experienceLevel', 'workplaceType',
-    'under10Apps', 'connectDelay'
+    'under10Apps', 'connectDelay', 'catchUpLimit', 'pagesLimit', 'weeklyLimit', 'distStrategy'
 ];
 const startBtn = document.getElementById('startBtn');
 const stopBtn = document.getElementById('stopBtn');
@@ -42,7 +42,12 @@ const defaultSettings = {
     datePosted: "r86400",
     experienceLevel: "2",
     workplaceType: "2",
-    under10Apps: false
+    under10Apps: false,
+    connectDelay: 10,
+    catchUpLimit: 200,
+    pagesLimit: 500,
+    weeklyLimit: 1000,
+    distStrategy: 'standard'
 };
 
 // UI Helpers
@@ -138,6 +143,16 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
 });
 
+// AUTO-SAVE LISTENERS
+fields.forEach(field => {
+    const el = document.getElementById(field);
+    if (el) {
+        el.addEventListener('change', () => {
+            saveSettings();
+        });
+    }
+});
+
 // MUTUAL EXCLUSION HELPER
 function clearAllStates(exclude = null) {
     const states = {
@@ -146,7 +161,8 @@ function clearAllStates(exclude = null) {
         autoConnectRunning: false, // Connect (Legacy)
         catchUpRunning: false,     // CatchUp
         pagesRunning: false,       // Pages
-        withdrawRunning: false     // Withdraw
+        withdrawRunning: false,    // Withdraw
+        catchUpSettings: {}        // Clear catchup settings on full stop
     };
 
 

@@ -25,7 +25,10 @@ window.LinkedInBot = {
         under10Apps: false,
         customLibrary: {},
         dailyConnectLimit: 1000,
-        distributionStrategy: 'standard'
+        distributionStrategy: 'standard',
+        catchUpLimit: 200,
+        pagesLimit: 500,
+        weeklyLimit: 1000
     }
 };
 
@@ -103,85 +106,155 @@ window.StatsManager = {
         catchup: { total: 0, weekly: 0, daily: 0, lastReset: Date.now() },
         pages: { total: 0, weekly: 0, daily: 0, lastReset: Date.now() },
         withdraw: { total: 0, weekly: 0, daily: 0, lastReset: Date.now() },
-        weekStartDate: Date.now()
+        weekStartDate: 0, // Will be set on first init
+        lastWeeklyResetDate: "Never",
+        lastDailyResetDate: "Never"
     },
 
     state: null,
+    initializing: false,
 
     init: async function () {
+        if (this.initializing) return this.state;
+        this.initializing = true;
+
         return new Promise((resolve) => {
-            chrome.storage.local.get(['stats'], (data) => {
+            const legacyKeys = ['catchUpCount', 'connectCount', 'pagesCount', 'applicationCount', 'withdrawCount'];
+            chrome.storage.local.get(['stats', ...legacyKeys], (data) => {
                 const now = Date.now();
-                const oneDayMs = 24 * 60 * 60 * 1000;
-                const oneWeekMs = 7 * oneDayMs;
+                const nowDateString = new Date(now).toDateString();
 
                 let stats = data.stats || JSON.parse(JSON.stringify(this.defaults));
 
-                // Calculate Monday-Sunday week boundaries
+                // 1. LEGACY SYNC (Run once if daily/total is zero or lower than legacy)
+                const mapping = {
+                    'catchUpCount': 'catchup',
+                    'connectCount': 'connect',
+                    'pagesCount': 'pages',
+                    'applicationCount': 'apply',
+                    'withdrawCount': 'withdraw'
+                };
+
+                legacyKeys.forEach(key => {
+                    const legacyVal = parseInt(data[key], 10) || 0;
+                    const statsKey = mapping[key];
+                    if (legacyVal > stats[statsKey].total) {
+                        log(`🔄 Syncing legacy ${key} (${legacyVal}) to stats...`, 'DEBUG');
+                        // If it's a new system, we assume the total is just the legacy val
+                        const diff = legacyVal - stats[statsKey].total;
+                        stats[statsKey].total = legacyVal;
+                        // Add to daily/weekly as well if they were zero (first run)
+                        if (stats[statsKey].daily === 0) stats[statsKey].daily += diff;
+                        if (stats[statsKey].weekly === 0) stats[statsKey].weekly += diff;
+                    }
+                });
+
+                // 2. Weekly Reset Check (Monday-Sunday boundary)
                 const getMondayOfWeek = (timestamp) => {
                     const date = new Date(timestamp);
-                    const day = date.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
-                    const diff = (day === 0 ? -6 : 1 - day); // If Sunday, go back 6 days; otherwise go back to Monday
+                    const day = date.getDay();
+                    const diff = (day === 0 ? -6 : 1 - day);
                     const monday = new Date(date);
                     monday.setDate(date.getDate() + diff);
-                    monday.setHours(0, 0, 0, 0); // Start of Monday
+                    monday.setHours(0, 0, 0, 0);
                     return monday.getTime();
                 };
 
                 const currentWeekStart = getMondayOfWeek(now);
                 const previousWeekStart = stats.weekStartDate || 0;
+                let resetOccurred = false;
 
-                // Helper to reset daily/weekly if needed
-                const checkReset = (type) => {
+                if (currentWeekStart > previousWeekStart) {
+                    log('📅 New Week Detected! Resetting weekly stats...', 'INFO');
+                    ['apply', 'connect', 'catchup', 'pages', 'withdraw'].forEach(type => {
+                        if (stats[type]) stats[type].weekly = 0;
+                    });
+                    stats.weekStartDate = currentWeekStart;
+                    stats.lastWeeklyResetDate = new Date(currentWeekStart).toDateString();
+                    resetOccurred = true;
+                }
+
+                // 3. Daily Reset Check
+                ['apply', 'connect', 'catchup', 'pages', 'withdraw'].forEach(type => {
                     const last = stats[type].lastReset || 0;
-
-                    // Daily Reset Check (using date comparison)
                     const lastDate = new Date(last).toDateString();
-                    const nowDate = new Date(now).toDateString();
 
-                    if (lastDate !== nowDate) {
+                    if (lastDate !== nowDateString) {
                         stats[type].daily = 0;
                         stats[type].lastReset = now;
+                        stats.lastDailyResetDate = nowDateString;
+                        resetOccurred = true;
                     }
-
-                    // Weekly Reset Check (Monday-Sunday boundary)
-                    if (currentWeekStart > previousWeekStart) {
-                        stats[type].weekly = 0;
-                    }
-                };
-
-                // Check resets for all types
-                ['apply', 'connect', 'catchup', 'pages', 'withdraw'].forEach(checkReset);
-
-                // Global Weekly Timer Reset (Monday-Sunday boundary)
-                if (currentWeekStart > previousWeekStart) {
-                    stats.weekStartDate = currentWeekStart;
-                    log('📅 Stats Weekly Cycle Reset! (Monday Start)', 'INFO');
-                }
+                });
 
                 this.state = stats;
                 chrome.storage.local.set({ stats: this.state });
+
+                // Sync LinkedInBot counts if on page
+                if (window.LinkedInBot) {
+                    window.LinkedInBot.applicationCount = stats.apply?.total || 0;
+                    window.LinkedInBot.connectCount = stats.connect?.total || 0;
+                    window.LinkedInBot.catchUpCount = stats.catchup?.total || 0;
+                    window.LinkedInBot.pagesCount = stats.pages?.total || 0;
+                    window.LinkedInBot.withdrawCount = stats.withdraw?.total || 0;
+                }
+
+                if (resetOccurred) {
+                    log(`✅ Stats reset complete. (Daily: ${stats.lastDailyResetDate}, Weekly: ${stats.lastWeeklyResetDate})`, 'SUCCESS');
+                }
+
+                this.initializing = false;
                 resolve(this.state);
             });
         });
     },
 
     increment: function (type) {
-        if (!this.state) return; // Should run init first
+        return new Promise((resolve) => {
+            if (!this.state) {
+                this.init().then(() => this._performIncrement(type, resolve));
+            } else {
+                this._performIncrement(type, resolve);
+            }
+        });
+    },
 
-        // Ensure type exists
+    _performIncrement: function (type, resolve) {
         if (!this.state[type]) this.state[type] = { total: 0, weekly: 0, daily: 0, lastReset: Date.now() };
 
         this.state[type].total++;
         this.state[type].weekly++;
         this.state[type].daily++;
 
-        chrome.storage.local.set({ stats: this.state });
+        // Sync to legacy keys (for UI compatibility)
+        const mapping = {
+            'catchup': 'catchUpCount',
+            'connect': 'connectCount',
+            'pages': 'pagesCount',
+            'apply': 'applicationCount',
+            'withdraw': 'withdrawCount'
+        };
+        const legacyKey = mapping[type];
+        const updateObj = { stats: this.state };
+        if (legacyKey) updateObj[legacyKey] = this.state[type].total;
 
-        // Broadcast update for UI
-        try {
-            chrome.runtime.sendMessage({ action: 'statsUpdated', stats: this.state });
-        } catch (e) { }
+        chrome.storage.local.set(updateObj, () => {
+            // Update LinkedInBot if on page
+            if (window.LinkedInBot) {
+                if (type === 'apply') window.LinkedInBot.applicationCount = this.state[type].total;
+                if (type === 'connect') window.LinkedInBot.connectCount = this.state[type].total;
+                if (type === 'catchup') window.LinkedInBot.catchUpCount = this.state[type].total;
+                if (type === 'pages') window.LinkedInBot.pagesCount = this.state[type].total;
+                if (type === 'withdraw') window.LinkedInBot.withdrawCount = this.state[type].total;
+            }
+
+            // Broadcast update for popup UI
+            try {
+                chrome.runtime.sendMessage({ action: 'statsUpdated', stats: this.state });
+            } catch (e) { }
+
+            resolve(this.state);
+        });
     },
 
     getStats: function () {
@@ -230,3 +303,28 @@ window.WeeklyManager = {
         return Math.max(0, dailyTarget);
     }
 };
+
+// --- NEW HELPER: Bypass Redirection Alerts ---
+window.bypassBeforeUnload = () => {
+    log('🛡️ Bypassing "Leave site?" prompts...', 'INFO');
+    try {
+        const script = document.createElement('script');
+        script.textContent = `
+            (function() {
+                window.onbeforeunload = null;
+                window.onunload = null;
+                // Block all beforeunload listeners
+                window.addEventListener('beforeunload', (event) => {
+                    event.stopImmediatePropagation();
+                }, true);
+            })();
+        `;
+        (document.head || document.documentElement).appendChild(script);
+        script.remove();
+    } catch (e) {
+        log('⚠️ Failed to inject bypass script (Non-critical): ' + e.message, 'DEBUG');
+    }
+};
+
+// --- AUTO-INITIALIZE STATS ---
+window.StatsManager.init();

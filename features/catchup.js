@@ -5,6 +5,7 @@ window.startAutoCatchUp = async function (settings = {}) {
     LinkedInBot.isCatchingUp = true;
     LinkedInBot.catchUpCount = 0;
     const type = settings.type || 'all';
+    const sessionLimit = settings.limit || 200;
 
     log(`🎂 Starting Catch-Up (${type})...`, 'INFO');
 
@@ -12,17 +13,19 @@ window.startAutoCatchUp = async function (settings = {}) {
     let scrollAttempts = 0;
     const maxScrolls = 5;
 
-    // Load processed names and count from Storage (Persistent Memory)
+    // Load processed names from Storage (Persistent Memory)
     let processedNames = new Set();
     try {
-        const data = await chrome.storage.local.get(['catchUpProcessed', 'catchUpCount']);
+        const data = await chrome.storage.local.get(['catchUpProcessed']);
         if (data.catchUpProcessed) {
             processedNames = new Set(data.catchUpProcessed);
             log(`🧠 Loaded ${processedNames.size} known contacts from memory.`, 'INFO');
         }
-        if (data.catchUpCount) {
-            LinkedInBot.catchUpCount = data.catchUpCount;
-        }
+
+        // Use StatsManager for count
+        if (!window.StatsManager.state) await window.StatsManager.init();
+        LinkedInBot.catchUpCount = window.StatsManager.state.catchup.total || 0;
+
     } catch (e) { console.error(e); }
 
     while (LinkedInBot.isCatchingUp && scrollAttempts < maxScrolls) {
@@ -238,13 +241,11 @@ window.startAutoCatchUp = async function (settings = {}) {
                         sendBtn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
                     } catch (e) { log('   ❌ Click error: ' + e.message, 'ERROR'); }
 
-                    LinkedInBot.catchUpCount++;
-                    window.StatsManager.increment('catchup'); // Centralized stats
-                    chrome.storage.local.set({ catchUpCount: LinkedInBot.catchUpCount });
-                    chrome.runtime.sendMessage({ action: 'updateCatchUpCount', count: LinkedInBot.catchUpCount });
+                    // Update Statistics (Unified)
+                    await window.StatsManager.increment('catchup');
 
-                    // Check Limit
-                    const sessionLimit = settings.limit || 20;
+                    // Keep card UI updated locally
+                    card.setAttribute('data-processed', 'true');
                     log(`   📊 Progress: ${LinkedInBot.catchUpCount}/${sessionLimit}`, 'INFO');
 
                     if (LinkedInBot.catchUpCount >= sessionLimit) {
