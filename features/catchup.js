@@ -180,7 +180,7 @@ window.startAutoCatchUp = async function (settings = {}) {
                     messageLink.click();
                 }
 
-                await randomSleep(3500);
+                await randomSleep(3500, 1000); // 2.5–4.5s
                 actionTakenOnPage = true;
 
                 // Helper to find the SEND button

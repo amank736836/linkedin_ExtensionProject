@@ -156,10 +156,9 @@ window.runPagesAutomation = async function (settings = {}) {
             }
 
 
-            // SAFETY: Increased delay to prevent rate limiting (5-10 seconds)
-            const delay = 5000 + Math.random() * 5000;
-            log(`   ⏳ Waiting ${Math.round(delay / 1000)}s...`, 'DEBUG');
-            await randomSleep(delay);
+            // Delay between actions: 5s ±2s (3–7s)
+            await randomSleep(5000, 2000);
+            log(`   ⏳ Waiting ~5s...`, 'DEBUG');
         }
 
         // 3. Scroll & Pagination

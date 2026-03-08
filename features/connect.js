@@ -191,8 +191,9 @@ window.startAutoConnect = async function (settings = {}) {
                 }
             }
 
-            // Wait remaining time
-            if (delay > 2) await randomSleep((delay - 2) * 1000, 1000); // Remaining time ±1s
+            // Wait remaining time (minimum 3s enforced)
+            const effectiveDelay = Math.max(3, delay);
+            if (effectiveDelay > 2) await randomSleep((effectiveDelay - 2) * 1000, 1000); // Remaining time ±1s
         }
     }
 
