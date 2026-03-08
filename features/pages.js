@@ -51,10 +51,30 @@ window.runPagesAutomation = async function (settings = {}) {
         log(`Found ${actionableButtons.length} actionable '${mode}' buttons on screen.`, 'INFO');
 
         if (actionableButtons.length === 0) {
-            log('No buttons found. Scrolling...', 'INFO');
-            window.scrollBy(0, 800);
-            await randomSleep(2000);
-            scrollAttempts++;
+            log('No buttons found. Checking for "Show more results"...', 'INFO');
+
+            // First, check for the "Show more results" button
+            let showMoreBtn = document.querySelector('button.scaffold-finite-scroll__load-button');
+            if (!showMoreBtn) {
+                const allBtns = Array.from(document.querySelectorAll('button'));
+                showMoreBtn = allBtns.find(b =>
+                    (b.innerText || "").toLowerCase().includes('show more') && !b.disabled && b.offsetParent !== null
+                );
+            }
+
+            if (showMoreBtn) {
+                log(`   🔘 FOUND "Show more results" button! Clicking...`, 'INFO');
+                showMoreBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                await randomSleep(1000);
+                showMoreBtn.click();
+                await randomSleep(3000);
+                scrollAttempts = 0; // Reset so we don't stop too soon
+            } else {
+                log('   No "Show more" button. Scrolling...', 'INFO');
+                window.scrollBy(0, 1000);
+                await randomSleep(2500);
+                scrollAttempts++;
+            }
             continue;
         }
 

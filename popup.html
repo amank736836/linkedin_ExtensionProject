@@ -10,6 +10,7 @@
       padding: 0;
       margin: 0;
       background: #f3f2ef;
+      overflow-x: hidden;
     }
 
     .header {
@@ -163,9 +164,9 @@
 
   <!-- Tab Row 1: Main Features -->
   <div class="tabs">
-    <button class="tab-btn active" data-tab="apply">Apply</button>
+    <button class="tab-btn active" data-tab="catchup">Catch Up</button>
     <button class="tab-btn" data-tab="connect">Connect</button>
-    <button class="tab-btn" data-tab="catchup">Catch Up</button>
+    <button class="tab-btn" data-tab="apply">Apply</button>
   </div>
 
   <!-- Tab Row 2: Management -->
@@ -176,7 +177,7 @@
   </div>
 
   <!-- Apply (Dashboard) Tab -->
-  <div id="apply" class="tab-content active">
+  <div id="apply" class="tab-content">
     <div class="section">
       <div class="count-row">
         <span>Applied: <span id="count" class="count">0</span></span>
@@ -224,7 +225,7 @@
   </div>
 
   <!-- Catch Up Tab -->
-  <div id="catchup" class="tab-content">
+  <div id="catchup" class="tab-content active">
     <div class="section">
       <div class="section-title">Auto-Catch Up</div>
       <div class="input-group">
@@ -276,20 +277,20 @@
   <div id="settings" class="tab-content">
 
     <div class="tabs" style="background: #f3f2ef; border: none; margin-bottom: 10px;">
-      <button class="tab-btn sub-tab-btn active" data-subtab="filters"
-        style="background: #e0e0e0; border-radius: 4px 0 0 4px;">Filters</button>
-      <button class="tab-btn sub-tab-btn" data-subtab="profile"
-        style="background: #e0e0e0; border-left: 1px solid #fff;">Profile</button>
+      <button class="tab-btn sub-tab-btn active" data-subtab="analytics"
+        style="background: #e0e0e0; border-radius: 4px 0 0 4px;">Analytics</button>
       <button class="tab-btn sub-tab-btn" data-subtab="limits"
         style="background: #e0e0e0; border-left: 1px solid #fff;">Limits</button>
-      <button class="tab-btn sub-tab-btn" data-subtab="analytics"
-        style="background: #e0e0e0; border-left: 1px solid #fff;">Analytics</button>
+      <button class="tab-btn sub-tab-btn" data-subtab="filters"
+        style="background: #e0e0e0; border-left: 1px solid #fff;">Filters</button>
+      <button class="tab-btn sub-tab-btn" data-subtab="profile"
+        style="background: #e0e0e0; border-left: 1px solid #fff;">Profile</button>
       <button class="tab-btn sub-tab-btn" data-subtab="library"
         style="background: #e0e0e0; border-radius: 0 4px 4px 0; border-left: 1px solid #fff;">Library</button>
     </div>
 
     <!-- Analytics Sub-Section -->
-    <div id="analytics" class="sub-tab-content" style="display:none;">
+    <div id="analytics" class="sub-tab-content" style="display:block;">
       <div class="section">
         <div class="section-title">📊 Activity Dashboard</div>
         <div
@@ -351,7 +352,7 @@
     </div>
 
     <!-- Filters Sub-Section -->
-    <div id="filters" class="sub-tab-content active">
+    <div id="filters" class="sub-tab-content">
       <div class="section">
         <div class="section-title">Search Criteria</div>
         <div class="input-group">

@@ -3,6 +3,25 @@
 // (Feature logic is now in popup_scripts/*.js)
 // This file handles initialization, loading settings, and TABS.
 
+// Helper: Switch to a tab by its data-tab id
+function switchToTab(tabId) {
+    const btn = document.querySelector(`.tab-btn[data-tab="${tabId}"]`);
+    if (btn) btn.click();
+}
+
+// Auto-switch to active tab on first live status response
+let hasAutoSwitched = false;
+window.autoSwitchOnFirstStatus = function (status) {
+    if (hasAutoSwitched) return;
+    hasAutoSwitched = true;
+    if (status.isWithdrawing) switchToTab('withdraw');
+    else if (status.isConnecting) switchToTab('connect');
+    else if (status.isCatchingUp) switchToTab('catchup');
+    else if (status.isPagesRunning) switchToTab('pages');
+    else if (status.isRunning) switchToTab('apply');
+    // else: stays on default (Catch Up)
+};
+
 // 1. Tab Switching Logic
 document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -19,6 +38,12 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
         if (tabId) {
             const content = document.getElementById(tabId);
             if (content) content.classList.add('active');
+
+            // If Settings tab clicked, auto-open the first sub-tab (Analytics)
+            if (tabId === 'settings') {
+                const firstSubTab = document.querySelector('.sub-tab-btn');
+                if (firstSubTab) firstSubTab.click();
+            }
         }
 
         // Sub-tabs logic (if clicked a sub-tab)

@@ -91,6 +91,9 @@ function renderLibrary(unknown, library) {
 }
 
 function updateUI(status) {
+    // Auto-switch to active tab on first live status
+    if (window.autoSwitchOnFirstStatus) window.autoSwitchOnFirstStatus(status);
+
     if (startBtn) startBtn.disabled = status.isRunning;
     if (stopBtn) stopBtn.disabled = !status.isRunning;
 
