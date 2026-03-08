@@ -4,31 +4,106 @@
 <head>
   <meta charset="UTF-8">
   <style>
+    html {
+      overflow: hidden;
+    }
+
+    :root {
+      --bg: #f3f2ef;
+      --surface: #ffffff;
+      --border: #ddd;
+      --text-primary: #0a66c2;
+      --text-secondary: #666;
+      --text-muted: #888;
+      --tab-bg: #ffffff;
+      --input-border: #ddd;
+      --input-bg: #ffffff;
+      --input-color: #000;
+      --log-bg: #000;
+      --log-color: #0f0;
+      --shadow: rgba(0, 0, 0, 0.1);
+      --hint-color: #888;
+      --header-border: #ddd;
+    }
+
+    [data-theme="dark"] {
+      --bg: #1a1a1a;
+      --surface: #2d2d2d;
+      --border: #444;
+      --text-primary: #4da3ff;
+      --text-secondary: #ccc;
+      --text-muted: #999;
+      --tab-bg: #2d2d2d;
+      --input-border: #555;
+      --input-bg: #3a3a3a;
+      --input-color: #eee;
+      --log-bg: #0a0a0a;
+      --log-color: #39ff14;
+      --shadow: rgba(0, 0, 0, 0.4);
+      --hint-color: #777;
+      --header-border: #444;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --bg: #1a1a1a;
+        --surface: #2d2d2d;
+        --border: #444;
+        --text-primary: #4da3ff;
+        --text-secondary: #ccc;
+        --text-muted: #999;
+        --tab-bg: #2d2d2d;
+        --input-border: #555;
+        --input-bg: #3a3a3a;
+        --input-color: #eee;
+        --log-bg: #0a0a0a;
+        --log-color: #39ff14;
+        --shadow: rgba(0, 0, 0, 0.4);
+        --hint-color: #777;
+        --header-border: #444;
+      }
+    }
+
     body {
       width: 300px;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       padding: 0;
       margin: 0;
-      background: #f3f2ef;
+      background: var(--bg);
       overflow-x: hidden;
+      color: var(--text-secondary);
     }
 
     .header {
-      background: #fff;
-      padding: 15px;
-      border-bottom: 1px solid #ddd;
+      background: var(--surface);
+      padding: 12px 15px;
+      border-bottom: 1px solid var(--header-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
     }
 
     h2 {
-      color: #0a66c2;
+      color: var(--text-primary);
       margin: 0;
       font-size: 18px;
     }
 
+    #darkToggle {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 3px 8px;
+      cursor: pointer;
+      font-size: 14px;
+      color: var(--text-secondary);
+      line-height: 1;
+    }
+
     .tabs {
       display: flex;
-      background: #fff;
-      border-bottom: 1px solid #ddd;
+      background: var(--tab-bg);
+      border-bottom: 1px solid var(--border);
       flex-wrap: wrap;
     }
 
@@ -39,15 +114,15 @@
       background: none;
       font-size: 10px;
       font-weight: bold;
-      color: #666;
+      color: var(--text-secondary);
       cursor: pointer;
       border-bottom: 2px solid transparent;
       min-width: unset;
     }
 
     .tab-btn.active {
-      color: #0a66c2;
-      border-bottom-color: #0a66c2;
+      color: var(--text-primary);
+      border-bottom-color: var(--text-primary);
     }
 
     .tab-content {
@@ -65,10 +140,10 @@
     }
 
     .section {
-      background: white;
+      background: var(--surface);
       padding: 12px;
       border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 2px 4px var(--shadow);
       margin-bottom: 12px;
       box-sizing: border-box;
     }
@@ -77,7 +152,7 @@
       font-weight: bold;
       margin-bottom: 8px;
       font-size: 14px;
-      color: #666;
+      color: var(--text-secondary);
     }
 
     .input-group {
@@ -88,7 +163,7 @@
       display: block;
       font-size: 11px;
       margin-bottom: 2px;
-      color: #888;
+      color: var(--text-muted);
     }
 
     input,
@@ -96,10 +171,12 @@
     textarea {
       width: 100%;
       padding: 6px;
-      border: 1px solid #ddd;
+      border: 1px solid var(--input-border);
       border-radius: 4px;
       box-sizing: border-box;
       font-size: 13px;
+      background: var(--input-bg);
+      color: var(--input-color);
     }
 
     .btn {
@@ -130,8 +207,8 @@
     #log {
       height: 120px;
       overflow-y: auto;
-      background: #000;
-      color: #0f0;
+      background: var(--log-bg);
+      color: var(--log-color);
       font-family: monospace;
       font-size: 10px;
       padding: 5px;
@@ -148,14 +225,57 @@
     .count {
       font-size: 20px;
       font-weight: bold;
-      color: #0a66c2;
+      color: var(--text-primary);
     }
 
     .hint {
       font-size: 10px;
-      color: #888;
+      color: var(--hint-color);
       margin-top: 5px;
       font-style: italic;
+    }
+
+    /* Sub-tab row in Settings */
+    .sub-tab-row {
+      display: flex;
+      background: var(--bg);
+      border: none;
+      margin-bottom: 10px;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .sub-tab-btn {
+      flex: 1;
+      padding: 5px 2px;
+      font-size: 10px;
+      font-weight: bold;
+      cursor: pointer;
+      border: none;
+      border-left: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text-secondary);
+    }
+
+    .sub-tab-btn:first-child {
+      border-left: none;
+      border-radius: 4px 0 0 4px;
+    }
+
+    .sub-tab-btn:last-child {
+      border-radius: 0 4px 4px 0;
+    }
+
+    .sub-tab-btn.active {
+      background: var(--text-primary);
+      color: #fff;
+    }
+
+    /* Log footer */
+    .log-footer {
+      padding: 0 15px 15px 15px;
+      border-top: 1px solid var(--border);
+      background: var(--surface);
     }
   </style>
 </head>
@@ -163,6 +283,7 @@
 <body>
   <div class="header">
     <h2>LinkedIn Automator Pro</h2>
+    <button id="darkToggle" title="Toggle dark mode">🌙</button>
   </div>
 
   <!-- Tab Row 1: Main Features -->
@@ -197,7 +318,7 @@
       <div class="section-title">Auto-Connect</div>
       <div class="count-row" style="flex-direction: column; align-items: flex-start; gap: 5px;">
         <span>This Week: <span id="connectCountWeekly" class="count"
-            style="color: #2e7d32; font-size: 16px;">0</span></span>
+            style="color: #00c853; font-size: 16px;">0</span></span>
         <span>Overall Sent: <span id="connectCount" class="count" style="font-size: 16px;">0</span></span>
       </div>
       <div class="input-group">
@@ -243,8 +364,10 @@
         <label>Max Messages to Send</label>
         <input type="number" id="catchUpLimit" value="200" placeholder="200">
       </div>
-      <div class="count-row">
-        <span>Messages Sent: <span id="catchUpCount" class="count">0</span></span>
+      <div class="count-row" style="flex-direction: column; align-items: flex-start; gap: 5px;">
+        <span>This Week: <span id="catchUpCountWeekly" class="count"
+            style="color: #00c853; font-size: 16px;">0</span></span>
+        <span>Overall Sent: <span id="catchUpCount" class="count" style="font-size: 16px;">0</span></span>
       </div>
       <button id="startCatchUpBtn" class="btn">Start Catch Up</button>
       <button id="stopCatchUpBtn" class="btn btn-stop" disabled>Stop</button>
@@ -279,17 +402,12 @@
   <!-- Settings Tab -->
   <div id="settings" class="tab-content">
 
-    <div class="tabs" style="background: #f3f2ef; border: none; margin-bottom: 10px;">
-      <button class="tab-btn sub-tab-btn active" data-subtab="analytics"
-        style="background: #e0e0e0; border-radius: 4px 0 0 4px;">Analytics</button>
-      <button class="tab-btn sub-tab-btn" data-subtab="limits"
-        style="background: #e0e0e0; border-left: 1px solid #fff;">Limits</button>
-      <button class="tab-btn sub-tab-btn" data-subtab="filters"
-        style="background: #e0e0e0; border-left: 1px solid #fff;">Filters</button>
-      <button class="tab-btn sub-tab-btn" data-subtab="profile"
-        style="background: #e0e0e0; border-left: 1px solid #fff;">Profile</button>
-      <button class="tab-btn sub-tab-btn" data-subtab="library"
-        style="background: #e0e0e0; border-radius: 0 4px 4px 0; border-left: 1px solid #fff;">Library</button>
+    <div class="tabs sub-tab-row">
+      <button class="tab-btn sub-tab-btn active" data-subtab="analytics">Analytics</button>
+      <button class="tab-btn sub-tab-btn" data-subtab="limits">Limits</button>
+      <button class="tab-btn sub-tab-btn" data-subtab="filters">Filters</button>
+      <button class="tab-btn sub-tab-btn" data-subtab="profile">Profile</button>
+      <button class="tab-btn sub-tab-btn" data-subtab="library">Library</button>
     </div>
 
     <!-- Analytics Sub-Section -->
@@ -497,7 +615,7 @@
     </div>
   </div>
 
-  <div style="padding: 0 15px 15px 15px; border-top: 1px solid #ddd; background: #fff;">
+  <div class="log-footer">
     <div id="log">Logs...</div>
   </div>
 

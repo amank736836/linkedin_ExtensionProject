@@ -118,7 +118,11 @@ function updateUI(status) {
             if (weekDisplay) weekDisplay.innerText = status.stats.connect.weekly || 0;
         }
         const catchUpD = document.getElementById('catchUpCount');
-        if (catchUpD && status.stats.catchup) catchUpD.innerText = status.stats.catchup.total || 0;
+        if (catchUpD && status.stats.catchup) {
+            catchUpD.innerText = status.stats.catchup.total || 0;
+            const catchUpWeekD = document.getElementById('catchUpCountWeekly');
+            if (catchUpWeekD) catchUpWeekD.innerText = status.stats.catchup.weekly || 0;
+        }
         const pagesD = document.getElementById('pagesCount');
         if (pagesD && status.stats.pages) pagesD.innerText = status.stats.pages.total || 0;
         const withdrawD = document.getElementById('withdrawCount');

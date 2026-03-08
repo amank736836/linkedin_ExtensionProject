@@ -3,6 +3,30 @@
 // (Feature logic is now in popup_scripts/*.js)
 // This file handles initialization, loading settings, and TABS.
 
+// --- DARK MODE ---
+(function initDarkMode() {
+    const html = document.documentElement;
+    const saved = localStorage.getItem('theme');
+    const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const isDark = saved ? saved === 'dark' : systemDark;
+
+    if (isDark) html.setAttribute('data-theme', 'dark');
+    else html.setAttribute('data-theme', 'light');
+
+    // Set toggle icon
+    const toggle = document.getElementById('darkToggle');
+    if (toggle) toggle.textContent = isDark ? '☀️' : '🌙';
+
+    // Toggle handler
+    document.getElementById('darkToggle')?.addEventListener('click', () => {
+        const currentlyDark = html.getAttribute('data-theme') === 'dark';
+        const newTheme = currentlyDark ? 'light' : 'dark';
+        html.setAttribute('data-theme', newTheme);
+        localStorage.setItem('theme', newTheme);
+        document.getElementById('darkToggle').textContent = newTheme === 'dark' ? '☀️' : '🌙';
+    });
+})();
+
 // Helper: Switch to a tab by its data-tab id
 function switchToTab(tabId) {
     const btn = document.querySelector(`.tab-btn[data-tab="${tabId}"]`);
